@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>Sheets Portal</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="container viewer">
+    <section id="notfound" class="state" hidden>
+      <h1>Sheet not found</h1>
+      <p>That link doesn't point to a known sheet.</p>
+      <p><a href="index.html">Back to portal</a></p>
+    </section>
+
+    <section id="locked" class="state" hidden>
+      <h1 id="locked-title">Locked</h1>
+      <form id="unlock-form" autocomplete="off">
+        <label for="password">Password</label>
+        <input
+          id="password"
+          type="password"
+          name="password"
+          autocomplete="current-password"
+          required
+        />
+        <div id="error" class="error" hidden>Incorrect password</div>
+        <div class="row">
+          <a class="link" href="index.html">Back</a>
+          <button type="submit">Unlock</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="unlocked" class="state unlocked" hidden>
+      <header class="viewer-header">
+        <h1 id="unlocked-title"></h1>
+        <button id="lock-btn" type="button">Lock this sheet</button>
+      </header>
+      <iframe
+        id="sheet-frame"
+        title="Sheet"
+        referrerpolicy="no-referrer"
+      ></iframe>
+    </section>
+  </main>
+
+  <script type="module">
+    import { SHEETS, SESSION_TIMEOUT_MS } from "./config.js";
+
+    // ---- helpers -----------------------------------------------------------
+    const $ = (id) => document.getElementById(id);
+    const show = (id) => $(id).hidden = false;
+    const hide = (id) => $(id).hidden = true;
+
+    async function sha256Hex(text) {
+      const buf = await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(text),
+      );
+      return Array.from(new Uint8Array(buf))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+    }
+
+    function storageKey(sheetKey) {
+      return `${sheetKey}_unlock`;
+    }
+
+    // Fixed-expiry check. Not sliding — the record is valid only for
+    // SESSION_TIMEOUT_MS from the moment of login.
+    function hasValidUnlock(sheetKey) {
+      const raw = sessionStorage.getItem(storageKey(sheetKey));
+      if (!raw) return false;
+      try {
+        const rec = JSON.parse(raw);
+        if (
+          rec &&
+          typeof rec.time === "number" &&
+          Date.now() - rec.time < SESSION_TIMEOUT_MS
+        ) {
+          return true;
+        }
+      } catch (_) {
+        // fall through
+      }
+      sessionStorage.removeItem(storageKey(sheetKey));
+      return false;
+    }
+
+    // ---- flow --------------------------------------------------------------
+    const sheetKey = new URLSearchParams(location.search).get("sheet");
+    const sheet = sheetKey ? SHEETS[sheetKey] : null;
+
+    if (!sheet) {
+      document.title = "Sheet not found — Sheets Portal";
+      show("notfound");
+    } else {
+      document.title = `${sheet.name} — Sheets Portal`;
+      $("locked-title").textContent = sheet.name;
+      $("unlocked-title").textContent = sheet.name;
+
+      const openViewer = () => {
+        // Set the iframe src only after the gate passes. The browser address
+        // bar keeps showing viewer.html?sheet=... — the real docs.google.com
+        // URL only ever lives inside the iframe.
+        $("sheet-frame").src = sheet.embedUrl;
+        hide("locked");
+        hide("notfound");
+        show("unlocked");
+      };
+
+      const showLocked = () => {
+        hide("unlocked");
+        hide("notfound");
+        show("locked");
+        $("password").focus();
+      };
+
+      if (hasValidUnlock(sheetKey)) {
+        openViewer();
+      } else {
+        showLocked();
+      }
+
+      $("unlock-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const pw = $("password").value;
+        const hash = await sha256Hex(pw);
+        if (hash.toLowerCase() === sheet.passwordHash.toLowerCase()) {
+          sessionStorage.setItem(
+            storageKey(sheetKey),
+            JSON.stringify({ time: Date.now() }),
+          );
+          hide("error");
+          $("password").value = "";
+          openViewer();
+        } else {
+          show("error");
+          $("password").value = "";
+          $("password").focus();
+        }
+      });
+
+      $("lock-btn").addEventListener("click", () => {
+        sessionStorage.removeItem(storageKey(sheetKey));
+        location.reload();
+      });
+    }
+  </script>
+</body>
+</html>
