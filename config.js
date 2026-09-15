@@ -45,7 +45,7 @@ export const SHEETS = {
     passwordHash:
       "057ba03d6c44104863dc7361fe4578965d1887360f90a0895882e58a6248fc86",
     embedUrl:
-      "https://docs.google.com/spreadsheets/d/1fdbIlUlQlLV9-tqSOnACQw2IyNNshm7aaOdLEvAEBaI/edit?gid=0#gid=0",
+      "https://docs.google.com/spreadsheets/d/1DtztN8HhR5_smUaqbAtcWUHBHcbFWdaYtiTYRViz7tM/edit?usp=sharing",
   },
   encryption: {
     name: "Encryption Sheet",
