@@ -54,6 +54,13 @@ export const SHEETS = {
     embedUrl:
       "https://docs.google.com/spreadsheets/d/1tpe4-NIpthmUMl5IGO2jgIpRgQE0csZKH2qH9YPdpQI/edit?usp=drivesdk",
   },
+    ReviewSheet: {
+    name: "Review Sheet monday",
+    passwordHash:
+      "057ba03d6c44104863dc7361fe4578965d1887360f90a0895882e58a6248fc86",
+    embedUrl:
+      "https://view.monday.com/2074575511-193797a4aa11eb90a7b2d77a94c57151?r=apse2&is_sharable_link=true",
+  },
 };
 
 // Fixed session expiry from the moment of login. Not sliding — activity does
